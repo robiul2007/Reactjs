@@ -99,11 +99,29 @@ export default function App() {
     localStorage.setItem('rsDarkModeMain', !isDarkMode);
   };
 
-  const showToast = (msg, type = 'success') => {
-    const bg = type === 'error' ? '#f64e60' : '#1bc5bd';
-    setToast({ show: true, msg, bg });
+    const showToast = (msg, type = 'success') => {
+    let finalMsg = msg;
+    let bgGradient = '';
+
+    // 🎨 Smart Color & Emoji Logic
+    if (type === 'error') {
+      bgGradient = 'linear-gradient(135deg, #ff0844, #ffb199)'; // Fiery Red
+      if (!msg.includes('❌')) finalMsg = `🚨 ${msg} 😥`;
+    } else if (msg.toLowerCase().includes('cart')) {
+      bgGradient = 'linear-gradient(135deg, #f093fb, #f5576c)'; // Sunset Pink
+      finalMsg = `🛍️ ${msg} 💖`;
+    } else if (msg.toLowerCase().includes('log')) {
+      bgGradient = 'linear-gradient(135deg, #5ee7df, #b490ca)'; // Magical Blue/Purple
+      finalMsg = `👋 ${msg} ✨`;
+    } else {
+      bgGradient = 'linear-gradient(135deg, #11998e, #38ef7d)'; // Success Mint Green
+      if (!msg.includes('🎉')) finalMsg = `✅ ${msg} 🚀`;
+    }
+
+    setToast({ show: true, msg: finalMsg, bg: bgGradient });
     setTimeout(() => setToast({ show: false, msg: '', bg: '' }), 3000);
   };
+
 
   const navigate = (viewId, product = null) => {
     if(product) {
