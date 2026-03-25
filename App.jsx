@@ -4,11 +4,18 @@ import './index.css';
 
 const DB_URL = "https://leon-41242-default-rtdb.firebaseio.com/";
 const SLIDERS = ["./slider1.jpg", "./slider2.jpg", "./slider3.jpg"];
+// 📸 DIRECT GITHUB CDN IMAGES (Failsafe)
+const SLIDERS = [
+  "https://raw.githubusercontent.com/robiu2007/Discord/main/slider1.jpg",
+  "https://raw.githubusercontent.com/robiu2007/Discord/main/slider2.jpg",
+  "https://raw.githubusercontent.com/robiu2007/Discord/main/slider3.jpg"
+];
+
 const CATS = [
-  { name: "Chiffon", img: "./cat1.jpg" },
-  { name: "Cotton", img: "./cat2.jpg" },
-  { name: "Abayas", img: "./cat3.jpg" },
-  { name: "Undercaps", img: "./cat1.jpg" }
+  { name: "Chiffon", img: "https://raw.githubusercontent.com/robiu2007/Discord/main/cat1.jpg" },
+  { name: "Cotton", img: "https://raw.githubusercontent.com/robiu2007/Discord/main/cat2.jpg" },
+  { name: "Abayas", img: "https://raw.githubusercontent.com/robiu2007/Discord/main/cat3.jpg" },
+  { name: "Undercaps", img: "https://raw.githubusercontent.com/robiu2007/Discord/main/cat1.jpg" }
 ];
 
 export default function App() {
