@@ -22,7 +22,28 @@
   --light-bg: #2a2a2a;
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; transition: background-color 0.3s ease, color 0.3s ease; }
+* { 
+  margin: 0; 
+  padding: 0; 
+  box-sizing: border-box; 
+  transition: background 0.4s ease, color 0.4s ease, transform 0.2s ease; 
+  -webkit-tap-highlight-color: transparent; /* 🚫 Kills the ugly blue square */
+}
+
+/* ✨ Beautiful "Squish" Click Animation */
+button:active, 
+.icon-btn:active, 
+.brand-logo:active, 
+.category-item:active, 
+.sidebar-links div:active,
+.product-card:active {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+
+
+
+
 body { font-family: 'Jost', sans-serif; background: var(--bg-color); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
 h1, h2, h3, .brand-font { font-family: 'Playfair Display', serif; }
 
