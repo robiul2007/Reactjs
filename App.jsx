@@ -421,6 +421,8 @@ export default function App() {
           </div>
         );
       })()}
+      
+      
       <div className={`toast-notification ${toast.show ? 'show' : ''}`} style={{background: toast.bg}}>{toast.msg}</div>
       <footer style={{textAlign:'center', padding:'30px 20px', fontSize:'12px', borderTop:'1px solid var(--border-color)', color:'var(--text-muted)'}}><p>© 2026 RS Fashion. Developed by Robiul Islam.</p></footer>
     </>
