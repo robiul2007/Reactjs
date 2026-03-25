@@ -1,19 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './index.css';
 
+// ✨ VITE FOOLPROOF IMAGE IMPORTS ✨
+import slider1 from './slider1.jpg';
+import slider2 from './slider2.jpg';
+import slider3 from './slider3.jpg';
+import cat1 from './cat1.jpg';
+import cat2 from './cat2.jpg';
+import cat3 from './cat3.jpg';
+
 const DB_URL = "https://leon-41242-default-rtdb.firebaseio.com/";
-const SLIDERS = [
-  "https://raw.githubusercontent.com/robiu2007/Reactjs/main/slider1.jpg",
-  "https://raw.githubusercontent.com/robiu2007/Reactjs/main/slider2.jpg",
-  "https://raw.githubusercontent.com/robiu2007/Reactjs/main/slider3.jpg"
-];
+
+const SLIDERS = [slider1, slider2, slider3];
 
 const CATS = [
-  { name: "Chiffon", img: "https://raw.githubusercontent.com/robiu2007/Reactjs/main/cat1.jpg" },
-  { name: "Cotton", img: "https://raw.githubusercontent.com/robiu2007/Reactjs/main/cat2.jpg" },
-  { name: "Abayas", img: "https://raw.githubusercontent.com/robiu2007/Reactjs/main/cat3.jpg" },
-  { name: "Undercaps", img: "https://raw.githubusercontent.com/robiu2007/Reactjs/main/cat1.jpg" }
+  { name: "Chiffon", img: cat1 },
+  { name: "Cotton", img: cat2 },
+  { name: "Abayas", img: cat3 },
+  { name: "Undercaps", img: cat1 }
 ];
+
 
 export default function App() {
   const [products, setProducts] = useState([]);
