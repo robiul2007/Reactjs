@@ -63,6 +63,9 @@ export default function App() {
       size: Math.random() * 2 + 'px', delay: Math.random() * 5 + 's'
     })));
   }, []);
+
+
+
   useEffect(() => {
     if (currentView === 'home') {
       const timer = setInterval(() => setCurrentSlide((p) => (p + 1) % SLIDERS.length), 4000);
@@ -129,6 +132,9 @@ export default function App() {
     setChatMessages([...chatMessages, newMsg]); setChatInput('');
     try { await fetch(`${DB_URL}chat_${currentUser.userId}.json`, { method: 'POST', body: JSON.stringify(newMsg) }); } catch(e) {}
   };
+
+
+
   const fetchMyOrders = async () => {
     if(!currentUser) return;
     try {
@@ -197,6 +203,10 @@ export default function App() {
   };
 
   const getStatusColor = (s) => { const st=s.toLowerCase(); return st.includes('pending')?'#ffa800':st.includes('reject')?'#ef4444':'#10b981'; };
+
+
+
+
   const renderProductCard = (p) => {
     const finalPrice = p.discount > 0 ? Math.round(p.price - (p.price * (p.discount/100))) : p.price;
     return (
@@ -256,6 +266,9 @@ export default function App() {
             </div>
           </motion.div>
         )}
+
+
+
         {currentView === 'shop' && (() => {
           const filtered = activeCategory === 'All' ? products : products.filter(p => p.name.toLowerCase().includes(activeCategory.toLowerCase()) || (p.category && p.category.toLowerCase() === activeCategory.toLowerCase()));
           return (
@@ -347,9 +360,8 @@ export default function App() {
       </div>
 
       {isLoginOpen && (<div className="modal"><div className="modal-content"><span onClick={() => setIsLoginOpen(false)} style={{position:'absolute', top:'15px', right:'20px', fontSize:'24px', cursor:'pointer', color:'var(--text-main)'}}>&times;</span><h2 className="brand-font" style={{marginBottom:'20px'}}>Login</h2><form onSubmit={processLogin}><input name="name" placeholder="Full Name" required /><input name="phone" placeholder="Phone Number" required /><button type="submit" className="btn-main">Login / Create Account</button></form></div></div>)}
-  
-  
-        {isCheckoutOpen && (() => {
+      
+      {isCheckoutOpen && (() => {
         const amt = getFinalTotal();
         const upiLink = `upi://pay?pa=yourname@upi&pn=RS&am=${amt}&cu=INR`;
         const ua = navigator.userAgent;
@@ -386,5 +398,14 @@ export default function App() {
             </div>
           </div>
         );
-      })()
-        }
+      })()}
+      <div className={`toast-notification glass ${toast.show ? 'show' : ''}`} style={{background:'var(--accent)', color:'white', border:'none'}}>
+        {toast.msg}
+      </div>
+      
+      <footer style={{textAlign:'center', padding:'40px 20px', opacity:0.6, fontSize:'12px'}}>
+        <p>© 2026 RS Fashion. Built on clouds.</p>
+      </footer>
+    </>
+  );
+}
