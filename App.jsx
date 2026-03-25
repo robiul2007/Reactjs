@@ -1,138 +1,155 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-
 import './index.css';
 
 const DB_URL = "https://leon-41242-default-rtdb.firebaseio.com/";
-const SLIDERS = ["./slider1.jpg", "./slider2.jpg", "./slider3.jpg"];
-// 📸 DIRECT GITHUB CDN IMAGES (Failsafe)
-const SLIDERS = [
-  "https://raw.githubusercontent.com/robiu2007/Discord/main/slider1.jpg",
-  "https://raw.githubusercontent.com/robiu2007/Discord/main/slider2.jpg",
-  "https://raw.githubusercontent.com/robiu2007/Discord/main/slider3.jpg"
-];
-
+const SLIDERS = ["slider1.jpg", "slider2.jpg", "slider3.jpg"];
 const CATS = [
-  { name: "Chiffon", img: "https://raw.githubusercontent.com/robiu2007/Discord/main/cat1.jpg" },
-  { name: "Cotton", img: "https://raw.githubusercontent.com/robiu2007/Discord/main/cat2.jpg" },
-  { name: "Abayas", img: "https://raw.githubusercontent.com/robiu2007/Discord/main/cat3.jpg" },
-  { name: "Undercaps", img: "https://raw.githubusercontent.com/robiu2007/Discord/main/cat1.jpg" }
+  { name: "Chiffon", img: "cat1.jpg" },
+  { name: "Cotton", img: "cat2.jpg" },
+  { name: "Abayas", img: "cat3.jpg" },
+  { name: "Undercaps", img: "cat1.jpg" }
 ];
 
 export default function App() {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
-  const [currentView, setCurrentView] = useState('home'); 
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [activeCategory, setActiveCategory] = useState('All'); 
+  const [currentView, setCurrentView] = useState('home-view');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [currentHomeSlide, setCurrentHomeSlide] = useState(0);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [suggestedProducts, setSuggestedProducts] = useState([]);
   const [toast, setToast] = useState({ show: false, msg: '', bg: '' });
-  const [currentSlide, setCurrentSlide] = useState(0);
   const [orders, setOrders] = useState([]);
-  const [checkoutMode, setCheckoutMode] = useState('single');
-  const [paymentMethod, setPaymentMethod] = useState('UPI');
-  const [upiScreenshot, setUpiScreenshot] = useState('');
-  
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
-  const [profilePic, setProfilePic] = useState('');
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [checkoutMode, setCheckoutMode] = useState('single');
+  const [paymentMethod, setPaymentMethod] = useState('COD');
+  const [upiScreenshot, setUpiScreenshot] = useState('');
+  const [appliedCouponCode, setAppliedCouponCode] = useState('');
+  const [checkoutDiscount, setCheckoutDiscount] = useState(0);
+  const [dynamicUpiId, setDynamicUpiId] = useState("YOUR_UPI_ID@okaxis");
+  const [loginName, setLoginName] = useState('');
+  const [loginNumber, setLoginNumber] = useState('');
+
   const chatEndRef = useRef(null);
+  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   useEffect(() => {
     const isDark = localStorage.getItem('rsDarkModeMain') === 'true';
     setIsDarkMode(isDark);
     if(isDark) document.body.classList.add('dark-mode');
 
-    const savedUser = localStorage.getItem('rsFashionUser');
-    if (savedUser) {
-      const pUser = JSON.parse(savedUser);
-      setCurrentUser(pUser);
-      if(pUser.profilePic) setProfilePic(pUser.profilePic);
-    }
     const savedCart = localStorage.getItem('rsFashionCart');
-    if (savedCart) setCart(JSON.parse(savedCart));
+    if(savedCart) setCart(JSON.parse(savedCart));
 
-    const fetchDB = async () => {
+    const savedUser = localStorage.getItem('rsFashionUser');
+    if(savedUser) setCurrentUser(JSON.parse(savedUser));
+
+    fetch(DB_URL + 'settings.json').then(r=>r.json()).then(d=>{if(d && d.upiId) setDynamicUpiId(d.upiId);}).catch(()=>{});
+
+    const fetchProducts = async () => {
       try {
-        const res = await fetch(DB_URL + 'products.json');
-        const data = await res.json();
-        if(data) setProducts(Object.keys(data).map(k => ({ id: k, ...data[k] })));
+        const res = await fetch(DB_URL + 'products.json'); const data = await res.json();
+        if(data) setProducts(Object.keys(data).map(key => ({ id: key, ...data[key] })));
       } catch (e) {}
     };
-    fetchDB();
+    fetchProducts();
   }, []);
+
   useEffect(() => {
-    if (currentView === 'home') {
-      const timer = setInterval(() => setCurrentSlide((p) => (p + 1) % SLIDERS.length), 4000);
+    if (currentView === 'home-view') {
+      const timer = setInterval(() => setCurrentHomeSlide((p) => (p + 1) % SLIDERS.length), 4000);
       return () => clearInterval(timer);
     }
   }, [currentView]);
 
   useEffect(() => {
-    if (currentView === 'chat' && currentUser) {
-      fetchMessages();
-      const interval = setInterval(fetchMessages, 3000);
-      return () => clearInterval(interval);
+    let poller;
+    if (currentView === 'chat-view' && currentUser) {
+      fetchUserMessages();
+      poller = setInterval(fetchUserMessages, 5000);
     }
+    return () => clearInterval(poller);
   }, [currentView, currentUser]);
 
+  useEffect(() => {
+    if(chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
     document.body.classList.toggle('dark-mode');
     localStorage.setItem('rsDarkModeMain', !isDarkMode);
   };
 
-  const showToast = (msg, bg = 'var(--success)') => { setToast({ show: true, msg, bg }); setTimeout(() => setToast({ show: false, msg: '', bg: '' }), 3000); };
-
-  const navigate = (view, product = null) => {
-    if(product) setSelectedProduct(product);
-    setCurrentView(view); setIsSidebarOpen(false); window.scrollTo(0, 0);
-    if(view === 'orders') fetchMyOrders();
-    if(view === 'chat') fetchMessages();
+  const showToast = (msg, type = 'success') => {
+    const bg = type === 'error' ? '#f64e60' : '#1bc5bd';
+    setToast({ show: true, msg, bg });
+    setTimeout(() => setToast({ show: false, msg: '', bg: '' }), 3000);
   };
 
-  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % SLIDERS.length);
-  const prevSlide = () => setCurrentSlide((prev) => (prev === 0 ? SLIDERS.length - 1 : prev - 1));
+  const navigate = (viewId, product = null) => {
+    if(product) {
+      setSelectedProduct(product);
+      setGalleryIndex(0);
+      const finalPrice = product.discount > 0 ? Math.round(product.price - (product.price * (product.discount/100))) : product.price;
+      product.finalPrice = finalPrice;
+      setSuggestedProducts(products.filter(p => p.id !== product.id).sort(() => 0.5 - Math.random()).slice(0, 4));
+    }
+    setCurrentView(viewId);
+    setIsSidebarOpen(false);
+    setIsSearchOpen(false);
+    window.scrollTo(0, 0);
+    if(viewId === 'orders-view') fetchMyOrders();
+  };
 
   const addToCart = (product) => {
-    if(product.status === 'Out of Stock' || product.stock <= 0) return showToast("Sold Out!", "var(--error)");
+    if(product.status === 'Out of Stock' || product.stock <= 0) return showToast("Sold Out!", "error");
     const finalPrice = product.discount > 0 ? Math.round(product.price - (product.price * (product.discount/100))) : product.price;
     const newCart = [...cart, { ...product, finalPrice }];
     setCart(newCart); localStorage.setItem('rsFashionCart', JSON.stringify(newCart));
-    showToast("Added to Cart!");
+    showToast("Added to cart!");
     if(currentUser?.dbKey) fetch(`${DB_URL}users/${currentUser.dbKey}.json`, { method: 'PATCH', body: JSON.stringify({ cart: newCart }) });
   };
 
   const removeFromCart = (index) => {
     const newCart = [...cart]; newCart.splice(index, 1);
     setCart(newCart); localStorage.setItem('rsFashionCart', JSON.stringify(newCart));
+    if(currentUser?.dbKey) fetch(`${DB_URL}users/${currentUser.dbKey}.json`, { method: 'PATCH', body: JSON.stringify({ cart: newCart }) });
   };
 
-  const getCartTotal = () => cart.reduce((t, item) => t + parseInt(item.finalPrice || item.price), 0);
-  const getFinalTotal = () => checkoutMode === 'single' ? (selectedProduct.finalPrice || selectedProduct.price) : getCartTotal();
+  const getCartTotal = () => cart.reduce((t, item) => t + (item.finalPrice || item.price), 0);
 
-  const fetchMessages = async () => {
-    if(!currentUser) return;
-    try {
-      const res = await fetch(`${DB_URL}chat_${currentUser.userId}.json`);
-      const data = await res.json();
-      if (data) setChatMessages(Object.values(data));
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    } catch(e) {}
-  };
-
-  const handleSendMessage = async (e) => {
+  const processLogin = async (e) => {
     e.preventDefault();
-    if (!chatInput.trim() || !currentUser) return;
-    const newMsg = { text: chatInput, sender: 'user', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
-    setChatMessages([...chatMessages, newMsg]); setChatInput('');
-    try { await fetch(`${DB_URL}chat_${currentUser.userId}.json`, { method: 'POST', body: JSON.stringify(newMsg) }); } catch(e) {}
+    if(!loginName || !loginNumber) return showToast("Enter Name & Number", "error");
+    try {
+      const res = await fetch(DB_URL + 'users.json'); const data = await res.json();
+      let existingUser = null; let existingKey = null;
+      if(data) { for(let key in data) { if(data[key].phone === loginNumber) { existingUser = data[key]; existingKey = key; break; } } }
+      
+      if(existingUser && existingUser.banned) return alert("Account Suspended.");
+      
+      let userObj;
+      if(existingUser) { userObj = { ...existingUser, dbKey: existingKey }; } 
+      else {
+        userObj = { name: loginName, phone: loginNumber, userId: `RS${Math.floor(10000 + Math.random() * 90000)}`, banned: false, cart: [] };
+        const postRes = await fetch(DB_URL + 'users.json', { method: 'POST', body: JSON.stringify(userObj) });
+        const postData = await postRes.json(); userObj.dbKey = postData.name;
+      }
+      
+      if(userObj.cart && userObj.cart.length > 0 && cart.length === 0) { setCart(userObj.cart); localStorage.setItem('rsFashionCart', JSON.stringify(userObj.cart)); }
+      setCurrentUser(userObj); localStorage.setItem('rsFashionUser', JSON.stringify(userObj));
+      setIsLoginOpen(false); navigate('profile-view'); showToast("Logged in!");
+    } catch (error) {}
   };
+
   const fetchMyOrders = async () => {
     if(!currentUser) return;
     try {
@@ -141,298 +158,366 @@ export default function App() {
     } catch(e) {}
   };
 
-  const processLogin = async (e) => {
-    e.preventDefault();
-    const name = e.target.name.value; const phone = e.target.phone.value;
+  const fetchUserMessages = async () => {
+    if(!currentUser || !currentUser.dbKey) return;
     try {
-      const res = await fetch(DB_URL + 'users.json'); const data = await res.json();
-      let existingUser = null; let existingKey = null;
-      if(data) { Object.keys(data).forEach(k => { if(data[k].phone === phone) { existingUser = data[k]; existingKey = k; } }); }
-      let userObj;
-      if(existingUser) { userObj = { ...existingUser, dbKey: existingKey }; } 
-      else {
-        userObj = { name, phone, userId: `RS${Math.floor(10000+Math.random()*90000)}`, cart: [] };
-        const postRes = await fetch(DB_URL + 'users.json', { method: 'POST', body: JSON.stringify(userObj) });
-        const postData = await postRes.json(); userObj.dbKey = postData.name;
-      }
-      setCurrentUser(userObj); localStorage.setItem('rsFashionUser', JSON.stringify(userObj));
-      if(userObj.profilePic) setProfilePic(userObj.profilePic);
-      setIsLoginOpen(false); showToast("Welcome back!", "var(--info)");
-    } catch(e) { showToast("Error", "var(--error)"); }
+      let res = await fetch(`${DB_URL}chats/${currentUser.dbKey}/messages.json`); let msgs = await res.json();
+      if(msgs) setChatMessages(Object.values(msgs));
+    } catch(e) {}
   };
 
-  const handleProfileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const base64 = event.target.result;
-        setProfilePic(base64); showToast("Profile Updated!");
-        if(currentUser?.dbKey) {
-          const updatedUser = { ...currentUser, profilePic: base64 };
-          setCurrentUser(updatedUser); localStorage.setItem('rsFashionUser', JSON.stringify(updatedUser));
-          await fetch(`${DB_URL}users/${currentUser.dbKey}.json`, { method: 'PATCH', body: JSON.stringify({ profilePic: base64 }) });
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if(file) { const r = new FileReader(); r.onload = (ev) => setUpiScreenshot(ev.target.result); r.readAsDataURL(file); }
-  };
-
-  const processCheckout = async (e) => {
-    e.preventDefault();
-    if (paymentMethod === 'UPI' && !upiScreenshot) return showToast("Upload screenshot!", "var(--error)");
-    const orderData = {
-      userId: currentUser.userId, customerName: currentUser.name, phone: currentUser.phone,
-      address: `${e.target.add1.value}, ${e.target.add2.value} - ${e.target.pin.value}`,
-      items: checkoutMode === 'single' ? selectedProduct.name : cart.map(i=>i.name).join(", "),
-      totalAmount: getFinalTotal(), status: "Pending", deliveryTime: "Awaiting Confirmation", paymentType: paymentMethod
-    };
+  const sendUserMessage = async () => {
+    if(!currentUser || !currentUser.dbKey || !chatInput.trim()) return;
+    const msgData = { sender: 'user', text: chatInput.trim(), timestamp: Date.now(), status: 'sent' };
+    setChatInput(''); setChatMessages([...chatMessages, msgData]);
     try {
-      await fetch(DB_URL + 'orders.json', { method: 'POST', body: JSON.stringify(orderData) });
-      setIsCheckoutOpen(false); setUpiScreenshot('');
-      if(checkoutMode === 'cart') { setCart([]); localStorage.setItem('rsFashionCart', JSON.stringify([])); }
-      showToast("Order Placed Successfully!"); navigate('orders');
-    } catch(e) { showToast("Order Failed.", "var(--error)"); }
+      await fetch(`${DB_URL}chats/${currentUser.dbKey}/userName.json`, { method: 'PUT', body: JSON.stringify(currentUser.name) });
+      await fetch(`${DB_URL}chats/${currentUser.dbKey}/messages.json`, { method: 'POST', body: JSON.stringify(msgData) });
+      fetchUserMessages();
+    } catch(e) {}
   };
-
-  const getStatusColor = (s) => { const st=s.toLowerCase(); return st.includes('pending')?'var(--warning)':st.includes('reject')?'var(--error)':'var(--success)'; };
   const renderProductCard = (p) => {
+    const soldOut = p.status === 'Out of Stock' || p.stock <= 0;
     const finalPrice = p.discount > 0 ? Math.round(p.price - (p.price * (p.discount/100))) : p.price;
     return (
-      <div key={p.id} className="product-card" onClick={() => navigate('product', { ...p, finalPrice })}>
-        {p.discount > 0 && <div style={{position:'absolute', top:'10px', right:'10px', background:'var(--error)', color:'white', padding:'4px 8px', fontSize:'11px', fontWeight:'bold', borderRadius:'4px', zIndex:2}}>{p.discount}% OFF</div>}
-        <div className="product-img-wrap"><img src={p.img} alt={p.name}/></div>
+      <div key={p.id} className="product-card" onClick={() => navigate('product-view', p)} style={{position:'relative', opacity: soldOut ? 0.6 : 1}}>
+        {soldOut && <div style={{position:'absolute', top:'10px', left:'10px', background:'#1e1e2d', color:'white', padding:'4px 8px', fontSize:'11px', fontWeight:'bold', borderRadius:'4px', zIndex:2}}>Sold Out</div>}
+        {p.discount > 0 && !soldOut && <div style={{position:'absolute', top:'10px', right:'10px', background:'#f64e60', color:'white', padding:'4px 8px', fontSize:'11px', fontWeight:'bold', borderRadius:'4px', zIndex:2}}>{p.discount}% OFF</div>}
+        <div className="product-img-wrap"><img src={p.img} alt={p.name} style={{filter: soldOut ? 'grayscale(1)' : 'none'}}/></div>
         <div className="product-info">
-          <h3 style={{fontSize:'14px', marginBottom:'5px'}}>{p.name}</h3><p style={{color:'var(--accent)', fontWeight:'bold'}}>₹{finalPrice}</p>
+          <h3 style={{fontSize:'14px', marginBottom:'5px'}}>{p.name}</h3>
+          <p style={{color:'var(--accent-color)', fontWeight:'bold'}}>{p.discount > 0 ? <><span style={{textDecoration:'line-through', color:'#888', fontSize:'11px', marginRight:'5px'}}>₹{p.price}</span>₹{finalPrice}</> : `₹${p.price}`}</p>
         </div>
       </div>
     );
   };
 
+  const filteredSearch = products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
   return (
     <>
       <header>
-        <div style={{display:'flex', alignItems:'center', gap:'15px'}}><i className="fas fa-bars" style={{fontSize:'20px', cursor:'pointer'}} onClick={() => setIsSidebarOpen(true)}></i><div className="brand-logo" onClick={() => navigate('home')}>RS FASHION</div></div>
-        <div className="header-icons">
-          <i className={isDarkMode ? 'fas fa-sun' : 'fas fa-moon'} onClick={toggleTheme}></i> 
-          <i className="fas fa-search" onClick={() => navigate('shop')}></i> 
-          <div style={{position:'relative'}} onClick={() => navigate('cart')}><i className="fas fa-shopping-bag"></i>{cart.length > 0 && <span className="cart-badge">{cart.length}</span>}</div>
+        <div className="header-left">
+          <div className="menu-icon" onClick={() => setIsSidebarOpen(true)}><i className="fas fa-bars"></i></div>
+          <div className="brand-logo" onClick={() => navigate('home-view')}>RS FASHION</div>
+        </div>
+        <div className="header-right">
+          <i className={isDarkMode ? 'fas fa-sun' : 'fas fa-moon'} id="theme-toggle" onClick={toggleTheme} style={{marginRight: '10px'}}></i>
+          <i className="fas fa-search" onClick={() => setIsSearchOpen(!isSearchOpen)}></i>
+          <i className="far fa-user" onClick={() => currentUser ? navigate('profile-view') : setIsLoginOpen(true)}></i>
+          <div className="cart-icon-wrap" onClick={() => navigate('cart-view')}>
+            <i className="fas fa-shopping-bag"></i>
+            {cart.length > 0 && <span className="cart-count">{cart.length}</span>}
+          </div>
         </div>
       </header>
 
-      {isSidebarOpen && <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:1999}} onClick={() => setIsSidebarOpen(false)}></div>}
-      <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-        <div style={{padding:'20px', borderBottom:'1px solid var(--border-color)'}}><h3 className="brand-font">Menu</h3></div>
-        <div className="sidebar-links">
-          <div onClick={() => navigate('home')}><i className="fas fa-home"></i> Home</div>
-          <div onClick={() => { setActiveCategory('All'); navigate('shop'); }}><i className="fas fa-tshirt"></i> All Products</div>
-          <div onClick={() => navigate('cart')}><i className="fas fa-shopping-cart"></i> Cart</div>
-          <div onClick={() => currentUser ? navigate('orders') : setIsLoginOpen(true)}><i className="fas fa-box-open"></i> My Orders</div>
-          <div onClick={() => currentUser ? navigate('profile') : setIsLoginOpen(true)}><i className="fas fa-user-circle"></i> My Profile</div>
-          <div onClick={() => currentUser ? navigate('chat') : setIsLoginOpen(true)}><i className="fas fa-headphones-alt" style={{color:'var(--accent)'}}></i> Live Support</div>
-          <div onClick={() => window.location.href='mailto:robiulislam786786u@gmail.com'}><i className="fas fa-envelope"></i> Contact Us</div>
-        </div>
-      </div>
-
-      <div style={{minHeight: '80vh'}}>
-        {currentView === 'home' && (
-          <motion.div initial={{opacity:0}} animate={{opacity:1}}>
-            <div style={{position:'relative', width:'100%', height:'50vh', overflow:'hidden', background:'#000'}}>
-              <button className="slider-arrow left" onClick={prevSlide}><i className="fas fa-chevron-left"></i></button>
-              <button className="slider-arrow right" onClick={nextSlide}><i className="fas fa-chevron-right"></i></button>
-              {SLIDERS.map((img, i) => (<div key={i} style={{position:'absolute', inset:0, backgroundImage:`url(${img})`, backgroundSize:'cover', backgroundPosition:'center', opacity: i===currentSlide ? 0.8 : 0, transition:'1s'}} />))}
-            </div>
-            <div className="view-container">
-              <h2 className="section-title brand-font">Shop by Category</h2>
-              <div className="categories">
-                {CATS.map((cat, i) => (<div key={i} className="category-item" onClick={() => { setActiveCategory(cat.name); navigate('shop'); }}><img src={cat.img} className="category-img" alt={cat.name}/><p style={{fontSize:'13px', marginTop:'8px', color:'var(--text-main)'}}>{cat.name}</p></div>))}
-              </div>
-              <h2 className="section-title brand-font">Trending Now</h2>
-              <div className="products-grid">{products.slice(0,8).map(renderProductCard)}</div>
-            </div>
-          </motion.div>
-        )}
-        {currentView === 'shop' && (() => {
-          const filtered = activeCategory === 'All' ? products : products.filter(p => p.name.toLowerCase().includes(activeCategory.toLowerCase()) || (p.category && p.category.toLowerCase() === activeCategory.toLowerCase()));
-          return (
-          <motion.div className="view-container" initial={{opacity:0}} animate={{opacity:1}}>
-            <h2 className="section-title brand-font">{activeCategory === 'All' ? 'All Products' : `${activeCategory} Collection`}</h2>
-            <div style={{display:'flex', gap:'10px', overflowX:'auto', marginBottom:'20px', paddingBottom:'10px'}}>
-              <button onClick={()=>setActiveCategory('All')} style={{padding:'8px 16px', borderRadius:'20px', border:'1px solid var(--border-color)', background:activeCategory==='All'?'var(--accent)':'var(--card-bg)', color:activeCategory==='All'?'#000':'var(--text-main)', cursor:'pointer', fontWeight:'bold'}}>All</button>
-              {CATS.map(c => <button key={c.name} onClick={()=>setActiveCategory(c.name)} style={{padding:'8px 16px', borderRadius:'20px', border:'1px solid var(--border-color)', background:activeCategory===c.name?'var(--accent)':'var(--card-bg)', color:activeCategory===c.name?'#000':'var(--text-main)', cursor:'pointer', whiteSpace:'nowrap', fontWeight:'bold'}}>{c.name}</button>)}
-            </div>
-            <div className="products-grid">{filtered.length > 0 ? filtered.map(renderProductCard) : <p style={{textAlign:'center', width:'100%'}}>No items found.</p>}</div>
-          </motion.div>
-        );})()}
-
-        {currentView === 'product' && selectedProduct && (
-          <motion.div className="view-container" initial={{opacity:0}} animate={{opacity:1}}>
-            <div style={{display:'flex', flexWrap:'wrap', gap:'20px'}}>
-              <div style={{flex:1, minWidth:'280px'}}><img src={selectedProduct.img} style={{width:'100%', borderRadius:'8px'}} alt=""/></div>
-              <div style={{flex:1, minWidth:'280px'}}>
-                <h1 className="brand-font" style={{fontSize:'26px', marginBottom:'10px'}}>{selectedProduct.name}</h1>
-                <p style={{fontSize:'22px', color:'var(--accent)', fontWeight:'bold', marginBottom:'20px'}}>₹{selectedProduct.finalPrice}</p>
-                <div style={{display:'flex', gap:'10px'}}>
-                  <button onClick={() => addToCart(selectedProduct)} style={{flex:1, padding:'15px', background:'var(--light-bg)', border:'1px solid var(--border-color)', color:'var(--text-main)', borderRadius:'5px', fontWeight:'bold'}}>Add to Cart</button>
-                  <button onClick={() => { if(!currentUser) return setIsLoginOpen(true); setCheckoutMode('single'); setIsCheckoutOpen(true); }} style={{flex:1, padding:'15px', background:'var(--primary)', border:'none', color:'var(--bg-color)', borderRadius:'5px', fontWeight:'bold'}}>Buy Now</button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {currentView === 'orders' && (
-          <motion.div className="view-container" initial={{opacity:0}} animate={{opacity:1}}>
-            <h2 className="section-title brand-font">My Orders</h2>
-            <div style={{maxWidth:'600px', margin:'0 auto'}}>
-              {orders.length === 0 ? <p style={{textAlign:'center'}} className="text-muted">No orders found.</p> : orders.map((o, i) => (
-                <div key={i} style={{background:'var(--card-bg)', border:`1px solid var(--border-color)`, borderLeft:`5px solid ${getStatusColor(o.status)}`, padding:'15px', borderRadius:'8px', marginBottom:'15px'}}>
-                  <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px'}}><b style={{fontSize:'14px'}}>{o.items}</b><span style={{background:getStatusColor(o.status), color:'white', padding:'3px 8px', borderRadius:'4px', fontSize:'11px'}}>{o.status}</span></div>
-                  <p style={{fontSize:'12px', color:'var(--text-muted)'}}>🚚 {o.deliveryTime}</p>
-                  <div style={{display:'flex', justifyContent:'space-between', marginTop:'10px', borderTop:'1px solid var(--border-color)', paddingTop:'10px'}}><b style={{color:'var(--accent)'}}>₹{o.totalAmount}</b><span style={{fontSize:'11px', background:'var(--light-bg)', padding:'3px 8px', borderRadius:'4px'}}>{o.paymentType}</span></div>
+      {isSearchOpen && (
+        <div className="search-container" style={{display:'block'}}>
+          <input type="text" className="search-input" placeholder="Search for products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          {searchQuery && filteredSearch.length > 0 && (
+            <div className="search-suggestions" style={{display:'block'}}>
+              {filteredSearch.map(p => (
+                <div key={p.id} className="suggestion-item" onClick={() => {navigate('product-view', p); setSearchQuery(''); setIsSearchOpen(false);}}>
+                  <img src={p.img} alt=""/><div><b>{p.name}</b><br/><span style={{color:'#c5a880', fontSize:'12px'}}>₹{p.price}</span></div>
                 </div>
               ))}
             </div>
-          </motion.div>
-        )}
+          )}
+        </div>
+      )}
 
-        {currentView === 'chat' && (
-          <motion.div className="view-container" initial={{opacity:0}} animate={{opacity:1}}>
-            <div className="chat-wrapper" style={{maxWidth:'600px', margin:'0 auto'}}>
-              <div style={{padding:'15px', borderBottom:'1px solid var(--border-color)', display:'flex', alignItems:'center', gap:'15px'}}>
-                <div style={{width:'35px', height:'35px', background:'var(--accent)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'#000'}}><i className="fas fa-headset"></i></div>
-                <div><h3 style={{fontSize:'15px', margin:0}}>Admin Support</h3></div>
-              </div>
-              <div className="chat-messages">
-                {chatMessages.length === 0 ? <p style={{textAlign:'center', marginTop:'20px', color:'var(--text-muted)'}}>Send a message to start chat</p> : null}
-                {chatMessages.map((msg, i) => (<div key={i} className={`chat-bubble ${msg.sender === 'user' ? 'sent' : 'received'}`}><p style={{margin:0}}>{msg.text}</p><span style={{fontSize:'9px', opacity:0.7, display:'block', textAlign:'right', marginTop:'5px'}}>{msg.time}</span></div>))}
-                <div ref={chatEndRef} />
-              </div>
-              <form onSubmit={handleSendMessage} style={{padding:'12px', borderTop:'1px solid var(--border-color)', display:'flex', gap:'10px', background:'var(--card-bg)'}}>
-                <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Message admin..." style={{flex:1, padding:'10px 15px', borderRadius:'5px', border:'1px solid var(--border-color)', background:'var(--bg-color)', color:'var(--text-main)', outline:'none', fontFamily:'Jost'}}/>
-                <button type="submit" style={{width:'40px', height:'40px', borderRadius:'5px', background:'var(--primary)', color:'var(--bg-color)', border:'none', cursor:'pointer'}}><i className="fas fa-paper-plane"></i></button>
-              </form>
-            </div>
-          </motion.div>
-        )}
-        {currentView === 'cart' && (
-          <motion.div className="view-container" style={{maxWidth:'700px', margin:'0 auto'}} initial={{opacity:0}} animate={{opacity:1}}>
-            <h2 className="section-title brand-font">Your Cart</h2>
-            {cart.length === 0 ? <p style={{textAlign:'center', color:'var(--text-muted)'}}>Cart is empty.</p> : (
-              <>{cart.map((item, i) => (<div key={i} style={{background:'var(--card-bg)', border:'1px solid var(--border-color)', display:'flex', alignItems:'center', gap:'15px', padding:'12px', borderRadius:'8px', marginBottom:'12px'}}><img src={item.img} style={{width:'60px', borderRadius:'4px'}} alt=""/><div style={{flex:1}}><h4 style={{fontSize:'14px', margin:0}}>{item.name}</h4><p style={{color:'var(--accent)', fontWeight:'bold', margin:0}}>₹{item.finalPrice}</p></div><i className="fas fa-trash" style={{cursor:'pointer', fontSize:'16px', color:'var(--error)'}} onClick={() => removeFromCart(i)}></i></div>))}
-                <div style={{textAlign:'right', fontSize:'18px', fontWeight:'bold', margin:'20px 0'}}>Total: ₹{getCartTotal()}</div><button className="btn-main" onClick={() => { if(!currentUser) return setIsLoginOpen(true); setCheckoutMode('cart'); setIsCheckoutOpen(true); }}>Checkout All Items</button></>
-            )}
-          </motion.div>
-        )}
-
-        {currentView === 'profile' && currentUser && (
-          <motion.div className="view-container" style={{maxWidth:'500px', margin:'0 auto'}} initial={{opacity:0}} animate={{opacity:1}}>
-            <div style={{background:'var(--card-bg)', border:'1px solid var(--border-color)', padding:'30px 20px', borderRadius:'8px', textAlign:'center'}}>
-              <div className="profile-upload">
-                {profilePic ? <img src={profilePic} alt="Profile"/> : <i className="fas fa-user"></i>}
-                <label className="upload-btn"><i className="fas fa-camera"></i><input type="file" accept="image/*" onChange={handleProfileUpload} style={{display:'none'}}/></label>
-              </div>
-              <h2 className="brand-font" style={{fontSize:'24px', margin:'10px 0 5px'}}>{currentUser.name}</h2>
-              <p style={{fontSize:'13px', marginBottom:'25px', color:'var(--text-muted)'}}>ID: {currentUser.userId}</p>
-              <button onClick={() => navigate('orders')} className="btn-main" style={{background:'var(--light-bg)', color:'var(--text-main)', border:'1px solid var(--border-color)', marginBottom:'10px'}}>View My Orders</button>
-              <button onClick={() => {setCurrentUser(null); setProfilePic(''); localStorage.removeItem('rsFashionUser'); navigate('home'); showToast("Logged out!");}} className="btn-main" style={{background:'var(--error)', color:'white'}}>Logout</button>
-            </div>
-          </motion.div>
-        )}
-        
-        {currentView === 'about' && (
-          <motion.div className="view-container" initial={{opacity:0}} animate={{opacity:1}}><div style={{background:'var(--card-bg)', border:'1px solid var(--border-color)', padding:'40px', borderRadius:'8px', textAlign:'center', maxWidth:'600px', margin:'0 auto'}}><h2 className="brand-font" style={{marginBottom:'10px'}}>Robiul Islam</h2><p style={{color:'var(--text-muted)', marginBottom:'20px'}}>Full Stack Developer & UI/UX Designer</p><button className="btn-main" onClick={() => window.location.href='mailto:robiulislam786786u@gmail.com'}>Contact Me</button></div></motion.div>
-        )}
+      {isSidebarOpen && <div className="sidebar-overlay" style={{display:'block'}} onClick={() => setIsSidebarOpen(false)}></div>}
+      <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+        <div className="sidebar-header"><h3 style={{fontFamily: 'Playfair Display'}}>Menu</h3><i className="fas fa-times" style={{fontSize: '20px', cursor: 'pointer'}} onClick={() => setIsSidebarOpen(false)}></i></div>
+        <div className="sidebar-links">
+          <a href="#" onClick={() => {setIsSearchOpen(true); setIsSidebarOpen(false);}}><i className="fas fa-search"></i> Search</a>
+          <a href="#" onClick={() => navigate('home-view')}><i className="fas fa-home"></i> Home</a>
+          <a href="#" onClick={() => navigate('shop-view')}><i className="fas fa-tshirt"></i> All Products</a>
+          <a href="#" onClick={() => navigate('cart-view')}><i className="fas fa-shopping-cart"></i> Cart</a>
+          <a href="#" onClick={() => {if(currentUser) navigate('orders-view'); else setIsLoginOpen(true); setIsSidebarOpen(false);}}><i className="fas fa-box"></i> My Orders</a>
+          <a href="#" onClick={() => {if(currentUser) navigate('profile-view'); else setIsLoginOpen(true); setIsSidebarOpen(false);}}><i className="fas fa-user"></i> My Profile</a>
+          <a href="#" onClick={() => navigate('chat-view')}><i className="fas fa-headset"></i> Live Support</a>
+          <a href="#" onClick={() => navigate('about-view')}><i className="fas fa-info-circle"></i> About Developer</a>
+        </div>
+        <div style={{padding: '20px', textAlign: 'center', fontSize: '14px'}}><p>{currentUser ? <><b style={{color:'var(--text-main)'}}>{currentUser.name}</b><br/><span style={{color:'var(--text-gray)'}}>ID: {currentUser.userId}</span></> : 'Not Logged In'}</p></div>
       </div>
 
-      {isLoginOpen && (<div className="modal"><div className="modal-content"><span onClick={() => setIsLoginOpen(false)} style={{position:'absolute', top:'15px', right:'20px', fontSize:'24px', cursor:'pointer', color:'var(--text-main)'}}>&times;</span><h2 className="brand-font" style={{marginBottom:'20px'}}>Login</h2><form onSubmit={processLogin}><input name="name" placeholder="Full Name" required /><input name="phone" placeholder="Phone Number" required /><button type="submit" className="btn-main">Login / Create Account</button></form></div></div>)}
+      {currentView === 'home-view' && (
+        <div className="view-section active-view">
+          <div className="slider-container">
+            <div className="slider-btn left" onClick={() => setCurrentHomeSlide(p => p === 0 ? SLIDERS.length - 1 : p - 1)}><i className="fas fa-chevron-left"></i></div>
+            <div className="slider-btn right" onClick={() => setCurrentHomeSlide(p => (p + 1) % SLIDERS.length)}><i className="fas fa-chevron-right"></i></div>
+            <div className="slider-wrapper" style={{transform: `translateX(-${currentHomeSlide * 100}%)`}}>
+              {SLIDERS.map((img, i) => (<div key={i} className="slide" style={{backgroundImage: `url('${img}')`}}><div className="slide-content"><h1>{i===0?'Modest & Elegant':i===1?'Premium Quality':'New Collection'}</h1></div></div>))}
+            </div>
+          </div>
+          <h2 className="section-title">Shop by Category</h2>
+          <div className="categories">
+            {CATS.map((c, i) => (<div key={i} className="category-item" onClick={() => {setSearchQuery(c.name); setIsSearchOpen(true);}}><img src={c.img} className="category-img" alt=""/><p style={{fontSize:'13px', marginTop:'8px'}}>{c.name}</p></div>))}
+          </div>
+          <h2 className="section-title">Trending Now</h2>
+          <div className="products-grid">{products.slice(0,8).map(renderProductCard)}</div>
+        </div>
+      )}
+
+      {currentView === 'shop-view' && (
+        <div className="view-section active-view">
+          <h2 className="section-title">All Products</h2>
+          <div className="products-grid">{products.map(renderProductCard)}</div>
+        </div>
+      )}
+      {currentView === 'product-view' && selectedProduct && (() => {
+        const activeGallery = selectedProduct.gallery && selectedProduct.gallery.length > 0 ? selectedProduct.gallery : [selectedProduct.img];
+        return (
+          <div className="view-section active-view">
+            <div className="product-detail-container">
+              <div className="detail-img-box" style={{position: 'relative'}}>
+                {activeGallery.length > 1 && <div className="gallery-arrow left" style={{display:'flex'}} onClick={() => setGalleryIndex(p => p === 0 ? activeGallery.length - 1 : p - 1)}><i className="fas fa-chevron-left"></i></div>}
+                {activeGallery.length > 1 && <div className="gallery-arrow right" style={{display:'flex'}} onClick={() => setGalleryIndex(p => (p + 1) % activeGallery.length)}><i className="fas fa-chevron-right"></i></div>}
+                <img src={activeGallery[galleryIndex]} alt="Product" />
+              </div>
+              <div className="detail-info-box">
+                <p style={{color: 'var(--text-gray)', fontSize: '13px', marginBottom: '5px'}}>Product ID: {selectedProduct.id}</p>
+                <h1 className="detail-title">{selectedProduct.name}</h1>
+                <p className="detail-price">
+                  {selectedProduct.discount > 0 ? <><span style={{textDecoration:'line-through', color:'#888', fontSize:'14px', marginRight:'8px'}}>₹{selectedProduct.price}</span>₹{selectedProduct.finalPrice} <span style={{color:'#f64e60', fontSize:'12px'}}>({selectedProduct.discount}% OFF)</span></> : `₹${selectedProduct.price}`}
+                </p>
+                <ul className="features">
+                  <li><i className="fas fa-check-circle"></i> Premium Quality Fabric</li>
+                  {selectedProduct.paymentMode === 'UPI Only' ? <li style={{color:'#d9534f'}}><i className="fas fa-exclamation-circle"></i> Prepaid / UPI Only (No COD)</li> : <li><i className="fas fa-check-circle"></i> Cash on Delivery Available</li>}
+                </ul>
+                <div className="btn-group">
+                  <button className="btn-add" onClick={() => addToCart(selectedProduct)}>Add to Cart</button>
+                  <button className="btn-buy" onClick={() => { if(!currentUser) return setIsLoginOpen(true); setCheckoutMode('single'); setAppliedCouponCode(''); setCheckoutDiscount(0); setIsCheckoutOpen(true); }}>Buy Now</button>
+                </div>
+                <button className="btn-share" onClick={() => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Hey! Check out this beautiful ${selectedProduct.name} for just ₹${selectedProduct.finalPrice} at RS Fashion! 🛍️\n\n${window.location.href}`)}`)}><i className="fab fa-whatsapp"></i> Share with a Friend</button>
+              </div>
+            </div>
+            <h2 className="section-title" style={{marginTop: '50px'}}>You May Also Like</h2>
+            <div className="products-grid">{suggestedProducts.map(renderProductCard)}</div>
+          </div>
+        );
+      })()}
+
+      {currentView === 'cart-view' && (
+        <div className="view-section active-view">
+          <div className="cart-container">
+            <h2 className="section-title">Your Cart</h2>
+            {cart.length === 0 ? <p style={{textAlign:'center', color:'var(--text-gray)'}}>Cart is empty.</p> : (
+              <>
+                {cart.map((item, i) => (
+                  <div key={i} className="cart-item"><img src={item.img} alt=""/><div><h4 style={{fontSize:'14px', margin:0, color:'var(--text-main)'}}>{item.name}</h4><p style={{fontWeight:'bold', color:'var(--accent-color)', margin:0}}>₹{item.finalPrice || item.price}</p></div><i className="fas fa-trash" style={{color:'#f64e60', marginLeft:'auto', cursor:'pointer'}} onClick={() => removeFromCart(i)}></i></div>
+                ))}
+                <div className="cart-total">Total: ₹{getCartTotal()}</div>
+                <button className="order-all-btn" onClick={() => { if(!currentUser) return setIsLoginOpen(true); setCheckoutMode('cart'); setAppliedCouponCode(''); setCheckoutDiscount(0); setIsCheckoutOpen(true); }}><i className="fas fa-shopping-cart"></i> Checkout All Items</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {currentView === 'orders-view' && (
+        <div className="view-section active-view">
+          <div className="about-container">
+            <h2 className="section-title">My Orders</h2>
+            <div style={{textAlign: 'left', marginTop: '15px'}}>
+              {orders.length === 0 ? <p style={{textAlign:'center', color:'var(--text-gray)'}}>No orders found.</p> : orders.map((o, i) => {
+                const color = o.status === 'Pending' ? '#ffa800' : (o.status === 'Rejected' ? '#f64e60' : '#1bc5bd');
+                return (
+                  <div key={i} style={{background:'var(--card-bg)', padding:'15px', borderRadius:'8px', marginBottom:'15px', borderLeft:`4px solid ${color}`, border:'1px solid var(--border-color)'}}>
+                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}><b style={{color:'var(--text-main)'}}>{o.items}</b><span style={{background:color, color:'white', padding:'4px 10px', borderRadius:'4px', fontSize:'11px', fontWeight:'bold'}}>{o.status}</span></div>
+                    <p style={{fontSize:'13px', marginTop:'10px', fontWeight:'bold', color:'var(--text-main)'}}>🚚 {o.deliveryTime}</p>
+                    <p style={{fontSize:'12px', color:'var(--text-gray)', marginTop:'5px'}}>Amount: ₹{o.totalAmount} <span style={{background: o.paymentType==='COD'?'#333':'#6528F7', color:'white', padding:'2px 6px', borderRadius:'4px', fontSize:'9px', marginLeft:'5px'}}>{o.paymentType}</span></p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {currentView === 'profile-view' && currentUser && (
+        <div className="view-section active-view">
+          <div className="about-container">
+            <h2 className="section-title">My Profile</h2>
+            <div className="dev-card" style={{textAlign: 'center'}}>
+              <div style={{width: '80px', height: '80px', background: '#c5a880', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 15px'}}><i className="fas fa-user"></i></div>
+              <h3>{currentUser.name}</h3><p style={{marginBottom: '15px', color:'var(--text-gray)'}}>User ID: <strong>{currentUser.userId}</strong></p>
+              <div style={{textAlign: 'left', marginBottom: '20px'}}><p style={{color:'var(--text-main)'}}><strong><i className="fas fa-phone"></i> Mobile:</strong> {currentUser.phone}</p></div>
+              <button onClick={() => navigate('orders-view')} style={{padding: '12px', background: 'var(--light-bg)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '8px', width: '100%', fontWeight: 'bold', fontSize:'16px', marginBottom:'10px', cursor:'pointer'}}><i className="fas fa-box"></i> View Order History</button>
+              <button onClick={() => {setCurrentUser(null); localStorage.removeItem('rsFashionUser'); navigate('home-view');}} style={{padding: '12px', background: '#d9534f', color: 'white', border: 'none', borderRadius: '8px', width: '100%', fontWeight: 'bold', fontSize:'16px', cursor:'pointer'}}>Logout</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {currentView === 'chat-view' && (
+        <div className="view-section active-view">
+          <div className="about-container">
+            <div className="chat-container">
+              <div className="chat-header-premium">
+                <div style={{width:'45px', height:'45px', background:'#c5a880', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'22px'}}>🎧</div>
+                <div><h3 style={{margin:0}}>Concierge Support</h3><p style={{margin:0, fontSize:'12px', color:'#ddd'}}>We usually reply instantly</p></div>
+              </div>
+              <div className="chat-messages-area" id="user-chat-box">
+                {!currentUser ? (
+                  <div style={{textAlign:'center', marginTop:'40px'}}><i className="fas fa-lock" style={{fontSize:'40px', color:'var(--text-gray)', marginBottom:'15px'}}></i><p style={{color:'var(--text-main)'}}>Please login to access live support.</p><button onClick={() => setIsLoginOpen(true)} style={{marginTop:'15px', padding:'10px 20px', background:'#c5a880', color:'white', border:'none', borderRadius:'8px', fontWeight:'bold', cursor:'pointer'}}>Login Now</button></div>
+                ) : chatMessages.length === 0 ? (
+                  <p style={{textAlign:'center', color:'var(--text-gray)', fontSize:'13px', marginTop:'20px'}}>Send a message to start chatting with us.</p>
+                ) : chatMessages.map((m, i) => (
+                  <div key={i} className={`chat-bubble ${m.sender === 'user' ? 'chat-user' : 'chat-admin'}`}>{m.text}</div>
+                ))}
+                <div ref={chatEndRef} />
+              </div>
+              {currentUser && (
+                <div className="chat-input-box">
+                  <input type="text" placeholder="Type your message..." value={chatInput} onChange={(e) => setChatInput(e.target.value)} />
+                  <button className="chat-send-btn" onClick={sendUserMessage}><i className="fas fa-paper-plane"></i></button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {currentView === 'about-view' && (
+        <div className="view-section active-view">
+          <div className="about-container">
+            <h2 className="section-title">About Developer</h2>
+            <div className="dev-card" style={{textAlign: 'center'}}>
+              <img src="robiul.png" alt="Robiul Islam" style={{width:'100px', height:'100px', borderRadius:'50%', objectFit:'cover', border:'3px solid #c5a880'}} />
+              <h3 style={{marginTop: '15px'}}>Hi, my name is Robiul Islam</h3>
+              <p style={{color:'var(--text-gray)', marginTop:'10px'}}>I made this elegant website to help businesses grow their online presence smoothly.</p>
+              <div style={{textAlign: 'left', marginTop:'20px', background:'var(--light-bg)', padding:'15px', borderRadius:'8px', border:'1px solid var(--border-color)'}}>
+                <p style={{color:'var(--text-main)'}}><strong><i className="fas fa-envelope" style={{color:'#c5a880'}}></i> Email:</strong> robiulislam786786u@gmail.com</p>
+              </div>
+              <button onClick={() => window.location.href='mailto:robiulislam786786u@gmail.com'} style={{marginTop:'15px', padding:'10px 20px', background:'#c5a880', color:'white', border:'none', borderRadius:'5px', fontWeight:'bold', cursor:'pointer'}}>Contact Me</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isLoginOpen && (
+        <div className="modal" style={{display:'flex'}}>
+          <div className="modal-content">
+            <span className="close-modal" onClick={() => setIsLoginOpen(false)}>&times;</span>
+            <h2 style={{fontFamily: 'Playfair Display', marginBottom: '20px'}}>Login</h2>
+            <form onSubmit={processLogin}>
+              <input type="text" placeholder="Full Name" value={loginName} onChange={e=>setLoginName(e.target.value)} required />
+              <input type="tel" placeholder="Mobile Number" value={loginNumber} onChange={e=>setLoginNumber(e.target.value)} required />
+              <button type="submit" style={{width: '100%', padding: '12px', background: '#1e1e2d', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor:'pointer'}}>Login / Create Account</button>
+            </form>
+          </div>
+        </div>
+      )}
       
       {isCheckoutOpen && (() => {
-        const amt = getFinalTotal();
-        const upiLink = `upi://pay?pa=yourname@upi&pn=RS&am=${amt}&cu=INR`;
-        const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const orderItems = checkoutMode === 'single' ? [selectedProduct] : cart;
+        const isUpiOnly = orderItems.some(i => i.paymentMode === 'UPI Only');
+        const baseTotal = orderItems.reduce((s, i) => s + (i.finalPrice || i.price), 0);
+        const finalCheckoutTotal = baseTotal - checkoutDiscount;
+        const upiLinkStr = `upi://pay?pa=${dynamicUpiId}&pn=RS%20Fashion&am=${finalCheckoutTotal}&cu=INR`;
         
+        const handleApplyCoupon = (e) => {
+          let code = appliedCouponCode.trim().toUpperCase(); if(!code) return;
+          let discountFound = 0;
+          orderItems.forEach(item => { if(item.coupon && item.coupon.toUpperCase() === code) { discountFound += Math.round(item.price * (item.discount / 100)); } });
+          if(discountFound > 0) { setCheckoutDiscount(discountFound); showToast("🎉 Coupon Applied!", "success"); } 
+          else { showToast("❌ Invalid Coupon", "error"); setCheckoutDiscount(0); }
+        };
+
+        const handleCheckoutSubmit = async (e) => {
+          e.preventDefault();
+          if (paymentMethod === "UPI" && !upiScreenshot) return showToast("Screenshot required for UPI!", "error");
+          
+          let itemsString = checkoutMode === 'single' ? selectedProduct.name : cart.map(i => i.name).join(", ");
+          if(checkoutDiscount > 0) { itemsString += ` [Coupon Used: ${appliedCouponCode}]`; }
+
+          const orderData = {
+            userId: currentUser.userId, customerName: currentUser.name, phone: currentUser.phone,
+            address: `${e.target.add1.value}, ${e.target.add2.value} - Pin: ${e.target.pin.value}`,
+            items: itemsString, totalAmount: finalCheckoutTotal, status: "Pending", deliveryTime: "Awaiting Admin Confirmation",
+            paymentType: paymentMethod, upiScreenshot: upiScreenshot
+          };
+          try {
+            await fetch(DB_URL + 'orders.json', { method: 'POST', body: JSON.stringify(orderData) }); 
+            setIsCheckoutOpen(false); setUpiScreenshot(''); setAppliedCouponCode(''); setCheckoutDiscount(0);
+            if(checkoutMode === 'cart') { setCart([]); localStorage.setItem('rsFashionCart', JSON.stringify([])); }
+            showToast("🎉 Order Placed!", "success"); setTimeout(() => navigate('orders-view'), 1500);
+          } catch (err) { showToast("Failed to place order.", "error"); }
+        };
+
         return (
-          <div className="modal">
-            <div className="modal-content glass">
-              <span 
-                onClick={() => setIsCheckoutOpen(false)} 
-                style={{position: 'absolute', top: '15px', right: '20px', fontSize: '24px', cursor: 'pointer', color: 'var(--text-main)'}}
-              >
-                &times;
-              </span>
-              <h2 className="brand-font" style={{marginBottom: '20px'}}>Checkout</h2>
-              
-              <form onSubmit={processCheckout}>
-                <input name="add1" placeholder="Address Line 1" required />
-                <input name="add2" placeholder="Landmark" required />
-                <input name="pin" placeholder="Pincode" required />
+          <div className="modal" style={{display:'flex'}}>
+            <div className="modal-content" style={{maxHeight: '90vh', overflowY: 'auto'}}>
+              <span className="close-modal" onClick={() => setIsCheckoutOpen(false)}>&times;</span>
+              <h2 style={{fontFamily: 'Playfair Display', marginBottom: '15px'}}>Complete Order</h2>
+              <form onSubmit={handleCheckoutSubmit}>
+                <p style={{fontSize: '13px', fontWeight: 'bold', marginBottom: '5px'}}>Shipping Details</p>
+                <input type="text" value={currentUser.name} required readOnly style={{opacity:0.7}} />
+                <input type="tel" value={currentUser.phone} required readOnly style={{opacity:0.7}} />
+                <input name="add1" type="text" placeholder="Address Line 1" required />
+                <input name="add2" type="text" placeholder="Landmark" />
+                <input name="pin" type="text" placeholder="Pincode" required />
                 
-                <div style={{textAlign: 'right', fontWeight: 'bold', fontSize: '16px', color: 'var(--accent)', margin: '15px 0'}}>
-                  Total: ₹{amt}
+                <div style={{marginBottom: '15px', display: 'flex', gap: '10px'}}>
+                  <input type="text" placeholder="Coupon Code" value={appliedCouponCode} onChange={e=>setAppliedCouponCode(e.target.value)} style={{flex:1, marginBottom:0}} />
+                  <button type="button" onClick={handleApplyCoupon} style={{padding: '12px 20px', background: '#c5a880', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor:'pointer'}}>Apply</button>
                 </div>
                 
-                <div style={{marginBottom: '15px'}}>
-                  <div 
-                    onClick={() => setPaymentMethod('COD')} 
-                    style={{padding: '12px', border: paymentMethod === 'COD' ? '2px solid var(--accent)' : '1px solid var(--border-color)', borderRadius: '5px', cursor: 'pointer', marginBottom: '10px', color: 'var(--text-main)'}}
-                  >
-                    💵 Cash on Delivery
-                  </div>
-                  <div 
-                    onClick={() => setPaymentMethod('UPI')} 
-                    style={{padding: '12px', border: paymentMethod === 'UPI' ? '2px solid var(--accent)' : '1px solid var(--border-color)', borderRadius: '5px', cursor: 'pointer', color: 'var(--text-main)'}}
-                  >
-                    📱 Pay Online (UPI)
-                  </div>
-                  
+                <div style={{marginBottom: '15px', fontSize: '14px', fontWeight: 'bold', textAlign: 'right', background: 'var(--light-bg)', padding:'10px', borderRadius:'5px'}}>
+                  Subtotal: ₹{baseTotal}<br/>
+                  {checkoutDiscount > 0 && <span style={{color: '#1bc5bd'}}>Coupon Discount: -₹{checkoutDiscount}<br/></span>}
+                  Total to Pay: ₹<span style={{color:'#f64e60', fontSize:'16px'}}>{finalCheckoutTotal}</span>
+                </div>
+                
+                <div style={{marginBottom: '20px'}}>
+                  <p style={{fontWeight: 'bold', marginBottom: '10px', fontSize: '14px'}}><i className="fas fa-wallet"></i> Select Payment:</p>
+                  {!isUpiOnly && (
+                    <label className={`payment-card ${paymentMethod==='COD'?'selected':''}`} onClick={() => setPaymentMethod('COD')}>
+                      <div><h4>Cash on Delivery</h4></div><i className="fas fa-check-circle" style={{color: paymentMethod==='COD'?'#c5a880':'#ddd'}}></i>
+                    </label>
+                  )}
+                  <label className={`payment-card ${paymentMethod==='UPI'?'selected':''}`} onClick={() => setPaymentMethod('UPI')}>
+                    <div><h4>Pay Online (UPI)</h4></div><i className="fas fa-check-circle" style={{color: paymentMethod==='UPI'?'#c5a880':'#ddd'}}></i>
+                  </label>
+
                   {paymentMethod === 'UPI' && (
-                    <div style={{textAlign: 'center', marginTop: '15px'}}>
+                    <div style={{marginTop: '15px', padding: '15px', border: '1px dashed #c5a880', borderRadius: '8px', textAlign: 'center'}}>
+                      <p style={{fontSize: '14px', fontWeight: 'bold', marginBottom: '10px'}}>Step 1: Pay ₹{finalCheckoutTotal}</p>
                       {isMobileDevice ? (
-                        <a 
-                          href={upiLink} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          className="btn-main" 
-                          style={{display: 'block', textDecoration: 'none', marginBottom: '10px'}}
-                        >
-                          Open UPI App
-                        </a>
+                        <a href={upiLinkStr} target="_blank" rel="noreferrer" style={{display: 'block', padding: '12px', background: '#6528F7', color: 'white', textDecoration: 'none', borderRadius: '8px', fontWeight: 'bold', marginBottom: '15px'}}>Open UPI App</a>
                       ) : (
-                        <img 
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiLink)}`} 
-                          alt="QR" 
-                          style={{background: 'white', padding: '10px', borderRadius: '5px', marginBottom: '10px'}}
-                        />
+                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiLinkStr)}`} style={{margin: '0 auto 15px auto', width: '150px', height: '150px', borderRadius: '8px', border: '2px solid var(--border-color)'}} alt="Scan to Pay" />
                       )}
-                      
-                      <label style={{display: 'block', padding: '15px', border: '1px dashed var(--border-color)', borderRadius: '5px', cursor: 'pointer', color: 'var(--text-main)'}}>
-                        Upload Screenshot
-                        <input type="file" accept="image/*" onChange={handleImageUpload} style={{display: 'none'}} />
+                      <p style={{fontSize: '14px', fontWeight: 'bold', color: '#d9534f', marginBottom: '10px'}}>Step 2: Upload Proof</p>
+                      <label style={{display: 'block', padding: '15px', border: '1px dashed var(--border-color)', borderRadius: '8px', cursor: 'pointer'}}>
+                        <span>{upiScreenshot ? "Screenshot Attached! ✅" : "Tap to attach screenshot"}</span>
+                        <input type="file" accept="image/*" style={{display: 'none'}} onChange={(e) => {
+                          const file = e.target.files[0]; if(file) { const reader = new FileReader(); reader.onload = (ev) => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); const scale = 400 / img.width; canvas.width = 400; canvas.height = img.height * scale; canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height); setUpiScreenshot(canvas.toDataURL('image/jpeg', 0.6)); }; img.src = ev.target.result; }; reader.readAsDataURL(file); }
+                        }} />
                       </label>
-                      
-                      {upiScreenshot && (
-                        <img src={upiScreenshot} style={{width: '100%', marginTop: '10px', borderRadius: '5px'}} alt="Proof" />
-                      )}
+                      {upiScreenshot && <img src={upiScreenshot} style={{width: '100%', maxWidth: '200px', marginTop: '15px', borderRadius: '8px'}} alt=""/>}
                     </div>
                   )}
                 </div>
-                
-                <button type="submit" className="btn-main">Confirm Order</button>
+                <button type="submit" style={{width: '100%', padding: '16px', background: '#c5a880', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor:'pointer'}}>Confirm Order</button>
               </form>
             </div>
           </div>
         );
       })()}
-      
-      
+
       <div className={`toast-notification ${toast.show ? 'show' : ''}`} style={{background: toast.bg}}>{toast.msg}</div>
-      <footer style={{textAlign:'center', padding:'30px 20px', fontSize:'12px', borderTop:'1px solid var(--border-color)', color:'var(--text-muted)'}}><p>© 2026 RS Fashion. Developed by Robiul Islam.</p></footer>
+      <footer>
+        <h2 style={{fontFamily: 'Playfair Display', marginBottom: '10px'}}>RS FASHION</h2>
+        <p style={{fontSize: '14px', marginBottom: '20px'}}>Premium modest wear shipped directly to you.</p>
+        <div className="footer-social-box">
+          <a href="https://youtube.com/@r.s_saru_vlog?si=G0fs6vu89ByI4r6C" target="_blank" rel="noreferrer" className="social-btn yt"><i className="fab fa-youtube"></i> Subscribe on YouTube</a>
+          <a href="https://www.instagram.com/rs__fashion____009?igsh=d3JtYnpoMmZ5a3Ri" target="_blank" rel="noreferrer" className="social-btn ig"><i className="fab fa-instagram"></i> Follow on Instagram</a>
+        </div>
+        <p style={{fontSize: '12px', color: '#aaa', marginTop: '20px'}}>© 2026 RS Fashion. Developed by Robiul Islam.</p>
+      </footer>
     </>
   );
 }
