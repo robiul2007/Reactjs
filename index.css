@@ -1,109 +1,67 @@
 :root {
-  --bg-color: #ffffff;
-  --card-bg: #ffffff;
-  --text-main: #222222;
-  --text-muted: #666666;
-  --primary: #1a1a1a;
-  --accent: #c5a880;
-  --border-color: #eaeaea;
-  --light-bg: #f9f9f9;
-  --success: #2ed573;
-  --error: #ff4757;
-  --info: #1e90ff;
-  --warning: #ffa800;
+  --bg-sky: linear-gradient(135deg, #e0f2fe 0%, #f8fafc 100%);
+  --card-glass: rgba(255, 255, 255, 0.55);
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --accent: #0ea5e9;
+  --border-glass: rgba(255, 255, 255, 0.6);
+  --success: #10b981;
+  --error: #ef4444;
 }
 
 .dark-mode {
-  --bg-color: #121212;
-  --card-bg: #1e1e1e;
-  --text-main: #ffffff;
-  --text-muted: #aaaaaa;
-  --primary: #ffffff;
-  --border-color: #333333;
-  --light-bg: #2a2a2a;
+  --bg-sky: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+  --card-glass: rgba(15, 23, 42, 0.65);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --accent: #38bdf8;
+  --border-glass: rgba(255, 255, 255, 0.1);
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; transition: background-color 0.3s ease, color 0.3s ease; }
-body { font-family: 'Jost', sans-serif; background: var(--bg-color); color: var(--text-main); -webkit-font-smoothing: antialiased; overflow-x: hidden;}
+* { margin: 0; padding: 0; box-sizing: border-box; transition: background 0.4s ease, color 0.4s ease; }
+body { font-family: 'Jost', sans-serif; background: var(--bg-sky); background-attachment: fixed; color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
 h1, h2, h3, .brand-font { font-family: 'Playfair Display', serif; }
 
-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 5%; background: var(--bg-color); position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border-color); box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-.brand-logo { font-size: 22px; font-weight: 600; letter-spacing: 2px; cursor: pointer; text-transform: uppercase; }
-.header-icons { display: flex; gap: 20px; align-items: center; font-size: 20px; }
-.icon-btn { cursor: pointer; color: var(--text-main); }
-.cart-badge { position: absolute; top: -6px; right: -8px; background: var(--error); color: #fff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;}
+/* ☁️ GLASSMORPHISM CLOUD CARDS ☁️ */
+.glass { background: var(--card-glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--border-glass); }
 
-/* TOAST & NOTIFICATIONS */
-.toast-notification { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); padding: 14px 28px; border-radius: 50px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); font-weight: 800; font-size: 15px; display: flex; align-items: center; gap: 12px; transition: 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55); z-index: 9999; border: 3px solid rgba(255,255,255,0.3); white-space: nowrap; }
-.toast-notification.show { bottom: 40px; }
-@keyframes bellShake { 0% { transform: rotate(0); } 15% { transform: rotate(15deg); } 30% { transform: rotate(-15deg); } 45% { transform: rotate(10deg); } 60% { transform: rotate(-10deg); } 75% { transform: rotate(5deg); } 90% { transform: rotate(-5deg); } 100% { transform: rotate(0); } }
-.shake-anim { animation: bellShake 2s infinite; display: inline-block; transform-origin: top center; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 15px 5%; position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid var(--border-glass); }
+.brand-logo { font-size: 22px; font-weight: 700; letter-spacing: 2px; cursor: pointer; }
+.header-icons { display: flex; gap: 18px; align-items: center; font-size: 20px; cursor: pointer; }
+.cart-badge { position: absolute; top: -6px; right: -8px; background: var(--error); color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 50%; }
 
-/* FLOATING CHAT BUTTON */
-.floating-chat { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background: var(--primary); color: var(--bg-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); cursor: pointer; z-index: 1000; transition: 0.3s; }
-.floating-chat:hover { transform: scale(1.1); }
-
-/* SIDEBAR & UI ELEMENTS */
-.sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
-.sidebar { position: fixed; top: 0; left: -300px; width: 280px; height: 100%; background: var(--bg-color); z-index: 1001; transition: 0.4s ease; box-shadow: 2px 0 10px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow-y: auto; }
+.sidebar { position: fixed; top: 0; left: -300px; width: 280px; height: 100%; z-index: 2000; transition: 0.4s ease; display: flex; flex-direction: column; }
 .sidebar.open { left: 0; }
-.sidebar-header { padding: 20px; background: var(--light-bg); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
-.sidebar-links { padding: 20px 0; flex-grow: 1; }
-.sidebar-links div { padding: 15px 20px; color: var(--text-main); font-size: 16px; border-bottom: 1px solid var(--border-color); cursor: pointer; display: flex; align-items: center; gap: 10px; }
+.sidebar-links div { padding: 16px 20px; border-bottom: 1px solid var(--border-glass); cursor: pointer; display: flex; align-items: center; gap: 12px; font-size: 15px; }
 
-.hero-slider { position: relative; width: 100%; height: 60vh; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #000; }
-.hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center; opacity: 0; transition: opacity 1s ease-in-out; }
-.hero-slide.active { opacity: 1; z-index: 2; }
-.hero-slide::after { content: ''; position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index: 1;}
-.hero-text { position: absolute; text-align: center; color: white; z-index: 10; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+.view-container { padding: 20px 5%; min-height: 80vh; max-width: 1200px; margin: 0 auto; }
+.section-title { text-align: center; font-size: 24px; margin: 30px 0 20px; }
 
-.view-container { padding: 20px 0; min-height: 80vh; }
-.section-title { text-align: center; font-size: 26px; margin: 30px 0; color: var(--text-main); }
-.categories { display: flex; justify-content: center; gap: 20px; padding: 10px 5%; overflow-x: auto; scrollbar-width: none; }
+.categories { display: flex; justify-content: center; gap: 15px; overflow-x: auto; padding-bottom: 10px; }
 .category-item { text-align: center; cursor: pointer; }
-.category-img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; background: var(--light-bg); }
-.category-name { font-size: 13px; margin-top: 8px; color: var(--text-main); }
+.category-img { width: 75px; height: 75px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-glass); padding: 2px; }
 
-.products-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; padding: 0 5%; max-width: 1200px; margin: 0 auto; }
-.product-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; cursor: pointer; position: relative; transition: 0.3s; }
-.product-img-wrap { width: 100%; aspect-ratio: 3/4; overflow: hidden; background: var(--light-bg);}
+.products-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; }
+.product-card { border-radius: 16px; overflow: hidden; cursor: pointer; position: relative; }
+.product-img-wrap { width: 100%; aspect-ratio: 3/4; overflow: hidden; }
 .product-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
-.product-info { padding: 12px; text-align: center; }
-.p-title { font-size: 14px; font-weight: 500; margin-bottom: 5px; color: var(--text-main); }
-.p-price { font-size: 15px; color: var(--accent); font-weight: 600; }
+.product-info { padding: 15px; text-align: center; }
 
-.product-detail-container { padding: 20px 5%; max-width: 1000px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 30px; }
-.detail-img-box { flex: 1; min-width: 300px; }
-.detail-img-box img { width: 100%; border-radius: 8px; object-fit: cover; aspect-ratio: 3/4; background: var(--light-bg);}
-.detail-info-box { flex: 1; min-width: 300px; }
-.detail-title { font-size: 26px; margin-bottom: 5px; color: var(--text-main); }
-.detail-price { font-size: 22px; color: var(--accent); font-weight: bold; margin-bottom: 20px; }
-.btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
-.btn-add, .btn-buy { flex: 1; padding: 15px; border: none; border-radius: 5px; font-size: 15px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-.btn-add { background: var(--light-bg); border: 1px solid var(--border-color); color: var(--text-main); }
-.btn-buy { background: var(--primary); color: var(--bg-color); }
+/* 💬 CHAT BUBBLES */
+.chat-wrapper { border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; height: 70vh; }
+.chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.chat-bubble { max-width: 75%; padding: 12px 16px; border-radius: 20px; font-size: 14px; position: relative; }
+.chat-bubble.sent { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+.chat-bubble.received { align-self: flex-start; background: rgba(0,0,0,0.05); border-bottom-left-radius: 4px; }
+.dark-mode .chat-bubble.received { background: rgba(255,255,255,0.1); }
 
-.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 20px;}
-.modal-content { background: var(--card-bg); padding: 30px; width: 100%; max-width: 380px; border-radius: 8px; text-align: center; position: relative; color: var(--text-main); max-height: 90vh; overflow-y: auto;}
-.close-modal { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: var(--text-main);}
-.modal input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 5px; font-family: 'Jost'; background: var(--bg-color); color: var(--text-main);}
-.about-container { padding: 40px 5%; max-width: 800px; margin: 0 auto; text-align: center; }
-.dev-card { background: var(--card-bg); padding: 30px; border-radius: 10px; margin-top: 20px; border: 1px solid var(--border-color);}
+.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 3000; padding: 15px; }
+.modal-content { padding: 25px; width: 100%; max-width: 400px; border-radius: 16px; position: relative; max-height: 90vh; overflow-y: auto; }
+.modal input { width: 100%; padding: 14px; margin-bottom: 12px; border: 1px solid var(--border-glass); border-radius: 8px; background: transparent; color: var(--text-main); font-family: 'Jost'; }
+.btn-main { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; }
 
-/* 🎧 IN-APP CHAT UI 🎧 */
-.chat-wrapper { background: #181822; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; min-height: 75vh; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: 1px solid #2a2a36; margin: 0 5%;}
-.chat-header { padding: 20px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid #2a2a36; background: #1d1d29; }
-.chat-icon-bg { width: 50px; height: 50px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #1a1a24; }
-.chat-messages { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; background: #14141d;}
-.chat-bubble { max-width: 75%; padding: 12px 18px; position: relative; font-size: 14px;}
-.chat-bubble.sent { align-self: flex-end; background: var(--accent); color: #1a1a24; border-radius: 20px 20px 0 20px; }
-.chat-bubble.received { align-self: flex-start; background: #2a2a36; color: white; border-radius: 20px 20px 20px 0; }
-.chat-time { font-size: 10px; margin-top: 5px; opacity: 0.8; display: flex; align-items: center; gap: 5px; }
-.chat-input-area { padding: 15px; background: #1d1d29; display: flex; align-items: center; gap: 10px; border-top: 1px solid #2a2a36;}
-.chat-input { flex: 1; background: #2a2a36; border: 1px solid rgba(255,255,255,0.05); padding: 14px 20px; border-radius: 25px; color: white; outline: none; font-family: 'Jost'; }
-.secure-badge { background: #2a2a36; color: #fff; font-size: 11px; padding: 6px 15px; border-radius: 20px; align-self: center; margin-bottom: 15px; font-weight: 600;}
+.toast-notification { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 30px; font-weight: bold; z-index: 4000; transition: 0.5s; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+.toast-notification.show { bottom: 30px; }
 
-@media (max-width: 768px) {
-  .products-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .detail-img-box, .detail-info-box { min-width: 100%; }
-}
+@keyframes twinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+.star { position: absolute; background: white; border-radius: 50%; animation: twinkle infinite; }
