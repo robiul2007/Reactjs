@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+
 import './index.css';
 
 const DB_URL = "https://leon-41242-default-rtdb.firebaseio.com/";
